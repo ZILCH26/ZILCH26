@@ -1,89 +1,39 @@
+/* Keep essential content visible without JavaScript. Native details elements
+   make the Career Gallery usable with touch, mouse, and keyboard. */
+const yearElement = document.querySelector('#year');
+if (yearElement) yearElement.textContent = new Date().getFullYear();
 
-/* =========================
-   1. AUTOMATIC COPYRIGHT YEAR
-========================= */
-
-const yearElement = document.querySelector("#year");
-
-if (yearElement) {
-  yearElement.textContent = new Date().getFullYear();
-}
-
-
-/* =========================
-   2. SCROLL REVEAL ANIMATIONS
-========================= */
-
-const reduceMotion = window.matchMedia(
-  "(prefers-reduced-motion: reduce)"
-).matches;
-
-const revealElements = document.querySelectorAll(
-  ".hero > *, .section-heading, .project-card, .skills-list span, .contact-section > *"
-);
-
-if (!reduceMotion && "IntersectionObserver" in window) {
-  revealElements.forEach((element) => {
-    element.classList.add("reveal");
+const careerEntries = document.querySelectorAll('.career-entries details');
+careerEntries.forEach((entry) => {
+  entry.addEventListener('toggle', () => {
+    if (!entry.open) return;
+    // Ignore delayed toggle events after another item has been opened.
+    careerEntries.forEach((other) => {
+      if (other !== entry) other.open = false;
+    });
   });
+});
 
-  const revealObserver = new IntersectionObserver(
-    (entries, observer) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    {
-      threshold: 0.12
+// Build an email draft; this website never claims to send a message itself.
+const contactForm = document.querySelector('#contact-form');
+const formStatus = document.querySelector('#form-status');
+if (contactForm && formStatus) {
+  contactForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (!contactForm.reportValidity()) return;
+    const fields = new FormData(contactForm);
+    const name = String(fields.get('name') || '').trim();
+    const email = String(fields.get('email') || '').trim();
+    const phone = String(fields.get('phone') || '').trim();
+    const message = String(fields.get('message') || '').trim();
+    if (!name || !message) {
+      formStatus.textContent = 'Please enter your name and a message before opening the draft.';
+      document.querySelector(!name ? '#contact-name' : '#contact-message').focus();
+      return;
     }
-  );
-
-  revealElements.forEach((element) => {
-    revealObserver.observe(element);
-  });
-}
-
-
-/* =========================
-   3. ACTIVE NAVIGATION
-========================= */
-
-const navLinks = document.querySelectorAll(
-  '.navbar nav a[href^="#"]'
-);
-
-const pageSections = document.querySelectorAll(
-  "main section[id]"
-);
-
-if ("IntersectionObserver" in window) {
-  const sectionObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          navLinks.forEach((link) => {
-            const isActive =
-              link.getAttribute("href") ===
-              `#${entry.target.id}`;
-
-            if (isActive) {
-              link.setAttribute("aria-current", "location");
-            } else {
-              link.removeAttribute("aria-current");
-            }
-          });
-        }
-      });
-    },
-    {
-      rootMargin: "-25% 0px -60% 0px"
-    }
-  );
-
-  pageSections.forEach((section) => {
-    sectionObserver.observe(section);
+    const subject = 'Portfolio inquiry from ' + name.replace(/[\r\n]/g, ' ');
+    const body = ['Name: ' + name, 'Email: ' + email, 'Phone: ' + (phone || 'Not provided'), '', message].join('\r\n');
+    window.location.href = contactForm.getAttribute('action') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    formStatus.textContent = 'Your email app should open with a draft. Review it and press Send there. If nothing opens, use the email link below. This website has not sent your message.';
   });
 }
